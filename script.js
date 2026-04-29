@@ -6,10 +6,9 @@ function changeGreeting() {
     const message = document.getElementById('message');
 
     const greetings = [
-        'Hello World!',
-        'Welcome!',
-        'Nice to meet you!',
-        'You\'re awesome!',
+        'Wedding Website',
+        'Assaf & Ilana',
+        'CouscouSaul!',
         'Keep clicking!'
     ];
 
