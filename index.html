@@ -1,18 +1,122 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hello World</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>חתונת אסף ואילנה</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1 id="greeting">Hello World!</h1>
-        <p class="subtitle">Welcome to my website</p>
-        <button onclick="changeGreeting()">Click Me</button>
-        <p id="message"></p>
+
+  <!-- SCREEN 1: Welcome / Name Selection -->
+  <div id="screen-welcome" class="screen">
+    <div class="welcome-card">
+      <div class="rings-icon">💍</div>
+      <h1 class="couple-names">אסף ואילנה</h1>
+      <p class="welcome-tagline">מזמינים אתכם לחגוג איתם!</p>
+      <div class="divider"></div>
+      <p class="enter-prompt">מי אתה/את?</p>
+      <input type="text" id="player-name" placeholder="הכנס/י את שמך" maxlength="30" onkeydown="handleNameEnter(event)">
+      <button class="btn-primary" onclick="submitName()">בואו נשחק! ✨</button>
     </div>
-    <script src="script.js"></script>
+  </div>
+
+  <!-- SCREEN 2: Portal -->
+  <div id="screen-portal" class="screen">
+    <div class="portal-header">
+      <h2>שלום, <span id="display-name"></span>! 🎉</h2>
+      <p class="portal-subtitle">בחר/י משחק להתחיל</p>
+    </div>
+    <div class="games-grid">
+      <div class="game-card" onclick="startGame('connections')">
+        <div class="game-badge" id="badge-connections">✓ הושלם</div>
+        <div class="game-icon">🔗</div>
+        <h3>חיבורים</h3>
+        <p>מצא/י קבוצות של 4 פריטים</p>
+      </div>
+      <div class="game-card" onclick="startGame('trivia')">
+        <div class="game-badge" id="badge-trivia">✓ הושלם</div>
+        <div class="game-icon">❓</div>
+        <h3>טריוויה</h3>
+        <p>שאלות על החתן והכלה</p>
+      </div>
+      <div class="game-card" onclick="startGame('wordle')">
+        <div class="game-badge" id="badge-wordle">✓ הושלם</div>
+        <div class="game-icon">📝</div>
+        <h3>וורדל</h3>
+        <p>נחש/י את מילת החתונה</p>
+      </div>
+    </div>
+    <div class="portal-footer">ממן אסף ואילנה 💕</div>
+  </div>
+
+  <!-- SCREEN 3: Connections Game -->
+  <div id="screen-connections" class="screen game-screen">
+    <div class="game-header">
+      <button class="btn-back" onclick="showScreen('portal')">← חזרה</button>
+      <h2>חיבורים</h2>
+      <div class="lives-display" id="connections-lives"></div>
+    </div>
+    <p class="game-instructions">מצא/י קבוצות של 4 פריטים קשורים</p>
+    <div id="connections-solved"></div>
+    <div id="connections-grid" class="connections-grid"></div>
+    <div class="connections-actions">
+      <button class="btn-secondary" onclick="connectionsDeselect()">ביטול</button>
+      <button class="btn-primary" onclick="connectionsSubmit()">בדוק!</button>
+    </div>
+    <div id="connections-result" class="result-banner hidden"></div>
+  </div>
+
+  <!-- SCREEN 4: Trivia Game -->
+  <div id="screen-trivia" class="screen game-screen">
+    <div class="game-header">
+      <button class="btn-back" onclick="showScreen('portal')">← חזרה</button>
+      <h2>טריוויה</h2>
+      <div id="trivia-score-header"></div>
+    </div>
+    <div id="trivia-content">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="trivia-progress"></div>
+      </div>
+      <p class="question-counter" id="question-counter"></p>
+      <div class="question-card">
+        <p id="trivia-question" class="question-text"></p>
+      </div>
+      <div id="trivia-options" class="options-grid"></div>
+      <button class="btn-primary hidden" id="trivia-next" onclick="triviaNext()">שאלה הבאה ←</button>
+    </div>
+    <div id="trivia-final" class="final-screen hidden">
+      <div class="final-card">
+        <div class="final-icon" id="trivia-final-icon">🏆</div>
+        <h3>סיימת!</h3>
+        <p id="final-score-text"></p>
+        <button class="btn-primary" onclick="initTrivia()">שחק שוב</button>
+        <button class="btn-secondary" onclick="showScreen('portal')">חזרה לתפריט</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 5: Wordle Game -->
+  <div id="screen-wordle" class="screen game-screen">
+    <div class="game-header">
+      <button class="btn-back" onclick="showScreen('portal')">← חזרה</button>
+      <h2>וורדל</h2>
+      <p id="wordle-attempts-left"></p>
+    </div>
+    <p class="game-instructions" id="wordle-hint"></p>
+    <div id="wordle-grid" class="wordle-grid"></div>
+    <div id="wordle-message" class="wordle-message"></div>
+    <div id="wordle-keyboard" class="wordle-keyboard"></div>
+    <div id="wordle-final" class="final-screen hidden">
+      <div class="final-card">
+        <div class="final-icon" id="wordle-final-icon"></div>
+        <h3 id="wordle-final-title"></h3>
+        <p id="wordle-final-text"></p>
+        <button class="btn-secondary" onclick="showScreen('portal')">חזרה לתפריט</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
