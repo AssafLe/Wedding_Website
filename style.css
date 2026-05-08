@@ -392,7 +392,40 @@ input[type="text"]:focus { border-color: var(--gold); background: var(--white); 
 .option-btn.correct { background: #D4EDDA; border-color: #28A745; color: #155724; font-weight: 700; }
 .option-btn.wrong   { background: #F8D7DA; border-color: #DC3545; color: #721C24; }
 
-#trivia-next { width: 100%; }
+#trivia-reveal { width: 100%; margin-bottom: 0.85rem; }
+
+.trivia-answer {
+  background: var(--c-green);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.5rem;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 0.85rem;
+  line-height: 1.4;
+}
+
+.self-assess {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.btn-assess {
+  flex: 1;
+  padding: 0.85rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: filter 0.15s;
+}
+.btn-assess:hover { filter: brightness(0.93); }
+.btn-assess-correct { background: #D4EDDA; color: #155724; }
+.btn-assess-wrong   { background: #F8D7DA; color: #721C24; }
 
 /* =============================================
    WORDLE GAME

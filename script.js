@@ -37,14 +37,12 @@ const GAME_DATA = {
   trivia: {
     questions: [
       {
-        question: "שאלת דוגמה: איפה נפגשו אסף ואילנה?",
-        options: ["תשובה א", "תשובה ב", "תשובה ג", "תשובה ד"],
-        answer: 0
+        question: "מאיזו שנה אסף ואילנה ביחד?",
+        answer: "2019"
       },
       {
         question: "שאלת דוגמה נוספת — מה הדבר האהוב על אסף?",
-        options: ["אפשרות 1", "אפשרות 2", "אפשרות 3", "אפשרות 4"],
-        answer: 2
+        answer: "תשובה כאן"
       }
       // הוסף/י שאלות נוספות כאן...
     ]
@@ -467,41 +465,31 @@ function renderTrivia() {
   document.getElementById("question-counter").textContent = `שאלה ${index + 1} מתוך ${total}`;
   document.getElementById("trivia-question").textContent = q.question;
 
-  const opts = document.getElementById("trivia-options");
-  opts.innerHTML = "";
-  q.options.forEach((opt, i) => {
-    const btn = document.createElement("button");
-    btn.className = "option-btn";
-    btn.textContent = opt;
-    btn.onclick = () => triviaAnswer(i);
-    opts.appendChild(btn);
-  });
-
-  document.getElementById("trivia-next").classList.add("hidden");
+  document.getElementById("trivia-reveal").classList.remove("hidden");
+  document.getElementById("trivia-answer").classList.add("hidden");
+  document.getElementById("trivia-answer").textContent = "";
+  document.getElementById("trivia-self-assess").classList.add("hidden");
   trivia.answered = false;
 }
 
-function triviaAnswer(chosen) {
-  if (trivia.answered) return;
-  trivia.answered = true;
-
+function triviaReveal() {
   const q = trivia.questions[trivia.index];
-  document.querySelectorAll(".option-btn").forEach((btn, i) => {
-    btn.disabled = true;
-    if (i === q.answer) btn.classList.add("correct");
-    else if (i === chosen) btn.classList.add("wrong");
-  });
-
-  if (chosen === q.answer) trivia.score++;
-  document.getElementById("trivia-next").classList.remove("hidden");
+  document.getElementById("trivia-reveal").classList.add("hidden");
+  document.getElementById("trivia-answer").textContent = q.answer;
+  document.getElementById("trivia-answer").classList.remove("hidden");
+  document.getElementById("trivia-self-assess").classList.remove("hidden");
 }
 
-function triviaNext() {
+function triviaAnswer(correct) {
+  if (trivia.answered) return;
+  trivia.answered = true;
+  if (correct) trivia.score++;
+  document.getElementById("trivia-self-assess").classList.add("hidden");
   trivia.index++;
   if (trivia.index >= trivia.questions.length) {
     triviaFinish();
   } else {
-    renderTrivia();
+    setTimeout(() => renderTrivia(), 350);
   }
 }
 
@@ -794,7 +782,7 @@ function renderLeaderboard(rows) {
           <div class="lb-name">${row.name || "אנונימי"}</div>
           <div class="lb-details">
             <span title="חיבורים">🔗 ${connScore}</span>
-            <span title="טריוויה">❓ ${trivScore}</span>
+            <span title="20 שאלות">❓ ${trivScore}</span>
             <span title="וורדל">📝 ${wordScore}</span>
           </div>
         </div>

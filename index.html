@@ -33,23 +33,20 @@
         <div class="game-badge" id="badge-connections">✓ הושלם</div>
         <div class="game-icon">🔗</div>
         <h3>חיבורים</h3>
-        <p>מצא/י קבוצות של 4 פריטים</p>
       </div>
       <div class="game-card" onclick="startGame('trivia')">
         <div class="game-badge" id="badge-trivia">✓ הושלם</div>
         <div class="game-icon">❓</div>
-        <h3>טריוויה</h3>
-        <p>שאלות על החתן והכלה</p>
+        <h3>20 שאלות</h3>
       </div>
       <div class="game-card" onclick="startGame('wordle')">
         <div class="game-badge" id="badge-wordle">✓ הושלם</div>
         <div class="game-icon">📝</div>
-        <h3>וורדל</h3>
-        <p>נחש/י את מילת החתונה</p>
+        <h3>5 אותיות</h3>
       </div>
     </div>
     <button class="btn-leaderboard" onclick="openLeaderboard()">🏆 לוח תוצאות</button>
-    <div class="portal-footer">ממן אסף ואילנה 💕</div>
+    <div class="portal-footer">💕</div>
   </div>
 
   <!-- SCREEN 3: Connections Game -->
@@ -86,7 +83,7 @@
   <div id="screen-trivia" class="screen game-screen">
     <div class="game-header">
       <button class="btn-back" onclick="showScreen('portal')">← חזרה</button>
-      <h2>טריוויה</h2>
+      <h2>20 שאלות</h2>
       <div id="trivia-score-header"></div>
     </div>
     <div id="trivia-content">
@@ -97,8 +94,12 @@
       <div class="question-card">
         <p id="trivia-question" class="question-text"></p>
       </div>
-      <div id="trivia-options" class="options-grid"></div>
-      <button class="btn-primary hidden" id="trivia-next" onclick="triviaNext()">שאלה הבאה ←</button>
+      <button class="btn-secondary" id="trivia-reveal" onclick="triviaReveal()">גלה תשובה 👁</button>
+      <div id="trivia-answer" class="trivia-answer hidden"></div>
+      <div id="trivia-self-assess" class="self-assess hidden">
+        <button class="btn-assess btn-assess-wrong" onclick="triviaAnswer(false)">✗ טעיתי</button>
+        <button class="btn-assess btn-assess-correct" onclick="triviaAnswer(true)">✓ צדקתי</button>
+      </div>
     </div>
     <div id="trivia-final" class="final-screen hidden">
       <div class="final-card">
