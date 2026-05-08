@@ -26,6 +26,7 @@
     <div class="portal-header">
       <h2>שלום, <span id="display-name"></span>! 🎉</h2>
       <p class="portal-subtitle">בחר/י משחק להתחיל</p>
+      <p id="portal-total-score" class="portal-total-score"></p>
     </div>
     <div class="games-grid">
       <div class="game-card" onclick="startGame('connections')">
@@ -47,6 +48,7 @@
         <p>נחש/י את מילת החתונה</p>
       </div>
     </div>
+    <button class="btn-leaderboard" onclick="openLeaderboard()">🏆 לוח תוצאות</button>
     <div class="portal-footer">ממן אסף ואילנה 💕</div>
   </div>
 
@@ -60,11 +62,24 @@
     <p class="game-instructions">מצא/י קבוצות של 4 פריטים קשורים</p>
     <div id="connections-solved"></div>
     <div id="connections-grid" class="connections-grid"></div>
-    <div class="connections-actions">
+    <div id="connections-actions" class="connections-actions">
       <button class="btn-secondary" onclick="connectionsDeselect()">ביטול</button>
       <button class="btn-primary" onclick="connectionsSubmit()">בדוק!</button>
     </div>
     <div id="connections-result" class="result-banner hidden"></div>
+    <div id="connections-final" class="final-screen hidden">
+      <div class="final-card">
+        <div class="final-icon" id="conn-final-icon"></div>
+        <h3 id="conn-final-title"></h3>
+        <p id="conn-final-text"></p>
+        <div class="score-block">
+          <div class="score-points" id="conn-score-points"></div>
+          <div class="score-sub" id="conn-score-sub"></div>
+          <div class="score-total" id="conn-score-total"></div>
+        </div>
+        <button class="btn-primary" onclick="showScreen('portal')">חזרה לתפריט</button>
+      </div>
+    </div>
   </div>
 
   <!-- SCREEN 4: Trivia Game -->
@@ -90,7 +105,11 @@
         <div class="final-icon" id="trivia-final-icon">🏆</div>
         <h3>סיימת!</h3>
         <p id="final-score-text"></p>
-        <button class="btn-primary" onclick="initTrivia()">שחק שוב</button>
+        <div class="score-block">
+          <div class="score-points" id="trivia-score-points"></div>
+          <div class="score-sub" id="trivia-score-sub"></div>
+          <div class="score-total" id="trivia-score-total"></div>
+        </div>
         <button class="btn-secondary" onclick="showScreen('portal')">חזרה לתפריט</button>
       </div>
     </div>
@@ -112,11 +131,30 @@
         <div class="final-icon" id="wordle-final-icon"></div>
         <h3 id="wordle-final-title"></h3>
         <p id="wordle-final-text"></p>
+        <div class="score-block">
+          <div class="score-points" id="wordle-score-points"></div>
+          <div class="score-sub" id="wordle-score-sub"></div>
+          <div class="score-total" id="wordle-score-total"></div>
+        </div>
         <button class="btn-secondary" onclick="showScreen('portal')">חזרה לתפריט</button>
       </div>
     </div>
   </div>
 
+  <!-- SCREEN 6: Leaderboard -->
+  <div id="screen-leaderboard" class="screen game-screen">
+    <div class="game-header">
+      <button class="btn-back" onclick="showScreen('portal')">← חזרה</button>
+      <h2>🏆 לוח תוצאות</h2>
+      <button class="btn-back" onclick="openLeaderboard()" title="רענן">🔄</button>
+    </div>
+    <div id="leaderboard-content" class="leaderboard-content"></div>
+  </div>
+
+  <!-- Firebase SDK (loaded before our scripts) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="firebase.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

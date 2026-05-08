@@ -10,24 +10,24 @@ const GAME_DATA = {
   connections: {
     categories: [
       {
-        name: "קטגוריה ראשונה — שם הקטגוריה",
+        name: "קוסקוס",
         color: "yellow",
-        items: ["פריט 1", "פריט 2", "פריט 3", "פריט 4"]
+        items: ["שמן ", "סול", "מרק", "יום שלישי"]
       },
       {
-        name: "קטגוריה שנייה — שם הקטגוריה",
+        name: "מקומות שגרנו בהם",
         color: "green",
-        items: ["פריט 5", "פריט 6", "פריט 7", "פריט 8"]
+        items: ["אפקה ", "קצרין", "קליבלנד", "לחובר"]
       },
       {
-        name: "קטגוריה שלישית — שם הקטגוריה",
+        name: "משותף לנו",
         color: "blue",
-        items: ["פריט 9", "פריט 10", "פריט 11", "פריט 12"]
+        items: ["טבעוני ", "לוחמה אלקטרונית", "מרתון", "פתח תקווה"]
       },
       {
         name: "קטגוריה רביעית — שם הקטגוריה",
         color: "purple",
-        items: ["פריט 13", "פריט 14", "פריט 15", "פריט 16"]
+        items: ["3 ", "2", "1", "4 "]
       }
     ]
   },
@@ -55,8 +55,8 @@ const GAME_DATA = {
   // hint: optional clue shown to players
   // maxGuesses: number of attempts (default 6)
   wordle: {
-    word: "שלום",
-    hint: "רמז: זה מה שאנחנו רוצים לאחל לכולכם!",
+    word: "כדורת",
+    hint: "...",
     maxGuesses: 6
   }
 
@@ -71,9 +71,9 @@ let currentScreen = "";
 
 // Connections
 let conn = {
-  items: [],       // { text, categoryIndex }[]
-  selected: [],    // indices into items[]
-  solved: [],      // category objects
+  items: [],
+  selected: [],
+  solved: [],
   lives: 4,
   gameOver: false
 };
@@ -91,8 +91,8 @@ let wordle = {
   word: "",
   wordLength: 0,
   maxGuesses: 6,
-  guess: [],       // current letters being typed
-  guesses: [],     // submitted guesses (arrays of letters)
+  guess: [],
+  guesses: [],
   row: 0,
   keyColors: {},
   gameOver: false
@@ -122,9 +122,18 @@ function submitName() {
     }, 2000);
     return;
   }
+  const testMode = new URLSearchParams(window.location.search).has("test");
+  const previousName = localStorage.getItem("weddingPlayer");
+  if (testMode || (previousName && previousName !== name)) {
+    localStorage.removeItem("weddingDone");
+    localStorage.removeItem("weddingPlayerId");
+  }
+
   playerName = name;
+  window.playerName = name; // used by firebase.js
   localStorage.setItem("weddingPlayer", name);
   document.getElementById("display-name").textContent = name;
+  if (window._updateTestBadge) window._updateTestBadge();
   showScreen("portal");
 }
 
@@ -133,6 +142,12 @@ function handleNameEnter(e) {
 }
 
 function startGame(game) {
+  const done = JSON.parse(localStorage.getItem("weddingDone") || "{}");
+  if (done[game]) {
+    showScreen(game);
+    showCompletedGame(game, typeof done[game] === "object" ? done[game] : {});
+    return;
+  }
   if (game === "connections") initConnections();
   else if (game === "trivia") initTrivia();
   else if (game === "wordle") initWordle();
@@ -140,21 +155,113 @@ function startGame(game) {
 }
 
 // ================================================================
-// GAME COMPLETION
+// SCORING & COMPLETION
+// Points: connections 0-100, trivia 0-100, wordle 0-100 (total max 300)
 // ================================================================
 
-function markComplete(game) {
+// Connections: 0 mistakes=100, 1=75, 2=50, 3=25, failed=0
+function connectionsPoints(mistakes, completed) {
+  if (!completed) return 0;
+  return Math.max(25, 100 - mistakes * 25);
+}
+
+// Trivia: percentage of correct answers
+function triviaPoints(score, total) {
+  return Math.round((score / total) * 100);
+}
+
+// Wordle: fewer guesses = more points; failed = 0
+const WORDLE_POINTS = [100, 85, 70, 55, 40, 25];
+function wordlePoints(guessRow, completed) {
+  return completed ? (WORDLE_POINTS[guessRow] || 25) : 0;
+}
+
+function submitGameScore(game, data) {
   const done = JSON.parse(localStorage.getItem("weddingDone") || "{}");
-  done[game] = true;
+  done[game] = data;
   localStorage.setItem("weddingDone", JSON.stringify(done));
+
+  // Push to Firebase
+  if (window.firebaseReady) {
+    window.submitScore(game, data);
+  }
 }
 
 function updatePortalBadges() {
   const done = JSON.parse(localStorage.getItem("weddingDone") || "{}");
   ["connections", "trivia", "wordle"].forEach(g => {
     const badge = document.getElementById("badge-" + g);
-    if (badge) badge.style.display = done[g] ? "block" : "none";
+    if (!badge) return;
+    const d = done[g];
+    if (d) {
+      const pts = typeof d === "object" ? (d.points ?? 0) : 0;
+      badge.textContent = `✓ ${pts} נק'`;
+      badge.style.display = "block";
+      badge.closest(".game-card").classList.add("done");
+    } else {
+      badge.style.display = "none";
+      badge.closest(".game-card").classList.remove("done");
+    }
   });
+  const total = getLocalTotal(done);
+  const el = document.getElementById("portal-total-score");
+  if (el) el.textContent = total > 0 ? `סה"כ: ${total} נקודות` : "";
+}
+
+function getLocalTotal(done) {
+  let total = 0;
+  ["connections", "trivia", "wordle"].forEach(g => {
+    const d = done[g];
+    if (d && typeof d === "object" && d.points != null) total += d.points;
+  });
+  return total;
+}
+
+function showScoreBlock(prefix, points, detail) {
+  const done = JSON.parse(localStorage.getItem("weddingDone") || "{}");
+  const total = getLocalTotal(done);
+  const pEl = document.getElementById(`${prefix}-score-points`);
+  const sEl = document.getElementById(`${prefix}-score-sub`);
+  const tEl = document.getElementById(`${prefix}-score-total`);
+  if (pEl) pEl.textContent = `${points} נקודות`;
+  if (sEl) sEl.textContent = detail;
+  if (tEl) tEl.textContent = `סה"כ: ${total} נקודות`;
+}
+
+function showCompletedGame(game, data) {
+  if (game === "connections") {
+    document.getElementById("connections-solved").innerHTML = "";
+    GAME_DATA.connections.categories.forEach(cat => {
+      const row = document.createElement("div");
+      row.className = `conn-solved ${cat.color}`;
+      row.innerHTML = `<strong>${cat.name}</strong><br>${cat.items.join(" · ")}`;
+      document.getElementById("connections-solved").appendChild(row);
+    });
+    document.getElementById("connections-grid").innerHTML = "";
+    showConnectionsFinal(data);
+  } else if (game === "trivia") {
+    document.getElementById("trivia-content").style.display = "none";
+    document.getElementById("trivia-final").classList.remove("hidden");
+    const pct = (data.score || 0) / (data.total || 1);
+    document.getElementById("trivia-final-icon").textContent =
+      pct === 1 ? "🏆" : pct >= 0.7 ? "🎉" : pct >= 0.5 ? "👏" : "💪";
+    document.getElementById("final-score-text").textContent =
+      `ענית נכון על ${data.score || 0} מתוך ${data.total || 0} שאלות!`;
+    showScoreBlock("trivia", data.points || 0, `${data.score || 0} מתוך ${data.total || 0} נכון`);
+  } else if (game === "wordle") {
+    document.getElementById("wordle-hint").textContent =
+      GAME_DATA.wordle.hint || `נחש/י מילה בת ${GAME_DATA.wordle.word.length} אותיות`;
+    document.getElementById("wordle-grid").style.display = "none";
+    document.getElementById("wordle-keyboard").style.display = "none";
+    document.getElementById("wordle-final").classList.remove("hidden");
+    document.getElementById("wordle-final-icon").textContent  = data.completed ? "🎊" : "😔";
+    document.getElementById("wordle-final-title").textContent = data.completed ? "כל הכבוד!" : "אוי...";
+    document.getElementById("wordle-final-text").textContent  = data.completed
+      ? `מצאת את המילה "${GAME_DATA.wordle.word}" 🎉`
+      : `המילה הייתה: ${GAME_DATA.wordle.word}`;
+    showScoreBlock("wordle", data.points || 0,
+      data.completed ? `${data.guesses} ניסיונות` : "לא הצלחת");
+  }
 }
 
 // ================================================================
@@ -190,6 +297,9 @@ function initConnections() {
 
   document.getElementById("connections-solved").innerHTML = "";
   document.getElementById("connections-result").className = "result-banner hidden";
+  document.getElementById("connections-final").classList.add("hidden");
+  document.getElementById("connections-grid").style.display = "";
+  document.getElementById("connections-actions").style.display = "";
   renderConnectionsGrid();
   renderConnectionsLives();
 }
@@ -243,12 +353,10 @@ function connectionsSubmit() {
     const cat = GAME_DATA.connections.categories[catIndex];
     conn.solved.push(cat);
 
-    // Remove solved items from the board
     const toRemove = [...conn.selected].sort((a, b) => b - a);
     toRemove.forEach(i => conn.items.splice(i, 1));
     conn.selected = [];
 
-    // Append solved row
     const solvedEl = document.getElementById("connections-solved");
     const row = document.createElement("div");
     row.className = `conn-solved ${cat.color}`;
@@ -257,13 +365,16 @@ function connectionsSubmit() {
 
     if (conn.solved.length === 4) {
       conn.gameOver = true;
-      markComplete("connections");
+      const mistakes = 4 - conn.lives;
+      const pts = connectionsPoints(mistakes, true);
+      const scoreData = { completed: true, mistakes, points: pts };
+      submitGameScore("connections", scoreData);
       showConnResult("כל הכבוד! פתרת את כל החיבורים! 🎉", "success");
+      setTimeout(() => showConnectionsFinal(scoreData), 1000);
     } else {
       showConnResult("נכון! 🎉", "success");
     }
   } else {
-    // Check "one away"
     const counts = {};
     chosen.forEach(item => { counts[item.categoryIndex] = (counts[item.categoryIndex] || 0) + 1; });
     const oneAway = Object.values(counts).some(c => c === 3);
@@ -278,7 +389,10 @@ function connectionsSubmit() {
     if (conn.lives <= 0) {
       conn.gameOver = true;
       revealRemainingConnections();
+      const failData = { completed: false, mistakes: 4, points: 0 };
+      submitGameScore("connections", failData);
       showConnResult("נגמרו החיים 💔", "error");
+      setTimeout(() => showConnectionsFinal(failData), 1400);
     } else {
       showConnResult(oneAway ? "כמעט! חסר אחד... 🤏" : "לא נכון, נסה שוב", "error");
     }
@@ -307,6 +421,24 @@ function showConnResult(msg, type) {
   el.textContent = msg;
   el.className = `result-banner ${type}`;
   setTimeout(() => { el.className = "result-banner hidden"; }, 2800);
+}
+
+function showConnectionsFinal(data) {
+  document.getElementById("connections-grid").style.display = "none";
+  document.getElementById("connections-actions").style.display = "none";
+  document.getElementById("connections-result").className = "result-banner hidden";
+  document.getElementById("connections-final").classList.remove("hidden");
+
+  document.getElementById("conn-final-icon").textContent = data.completed ? "🎉" : "😔";
+  document.getElementById("conn-final-title").textContent = data.completed ? "כל הכבוד!" : "אוי...";
+  document.getElementById("conn-final-text").textContent = data.completed
+    ? `סיימת עם ${data.mistakes === 0 ? "ללא טעויות" : `${data.mistakes} טעויות`}!`
+    : "נגמרו החיים 💔";
+  showScoreBlock("conn", data.points || 0,
+    data.completed ? (data.mistakes === 0 ? "ללא טעויות" : `${data.mistakes} טעויות`) : "לא הושלם");
+  setTimeout(() =>
+    document.getElementById("connections-final").scrollIntoView({ behavior: "smooth", block: "start" })
+  , 100);
 }
 
 // ================================================================
@@ -378,8 +510,7 @@ function triviaFinish() {
   const total = questions.length;
 
   document.getElementById("trivia-content").style.display = "none";
-  const finalEl = document.getElementById("trivia-final");
-  finalEl.classList.remove("hidden");
+  document.getElementById("trivia-final").classList.remove("hidden");
 
   const pct = score / total;
   const icon = pct === 1 ? "🏆" : pct >= 0.7 ? "🎉" : pct >= 0.5 ? "👏" : "💪";
@@ -387,14 +518,15 @@ function triviaFinish() {
   document.getElementById("final-score-text").textContent =
     `ענית נכון על ${score} מתוך ${total} שאלות!`;
 
-  markComplete("trivia");
+  const pts = triviaPoints(score, total);
+  submitGameScore("trivia", { score, total, points: pts });
+  showScoreBlock("trivia", pts, `${score} מתוך ${total} נכון`);
 }
 
 // ================================================================
 // WORDLE GAME
 // ================================================================
 
-// Hebrew keyboard rows (right to left display, RTL direction on rows)
 const KEYBOARD_ROWS = [
   ["פ", "ו", "ט", "א", "ר", "ק", "ם", "ן"],
   ["ף", "ך", "ל", "ח", "י", "ע", "כ", "ג", "ד", "ש"],
@@ -421,7 +553,6 @@ function initWordle() {
   document.getElementById("wordle-keyboard").style.display = "";
   document.getElementById("wordle-message").textContent = "";
 
-  // Adjust cell size for longer words
   const sz = wordle.wordLength <= 5 ? 52 : wordle.wordLength <= 6 ? 46 : 40;
   document.querySelectorAll(".wordle-cell").forEach(c => {
     c.style.width = sz + "px";
@@ -519,7 +650,6 @@ function wordleSubmit() {
   const result = scoreWordle(guess, wordle.word);
   wordle.guesses.push(guess);
 
-  // Animate cells and apply colors
   guess.forEach((letter, c) => {
     const cell = document.getElementById(`wcell-${wordle.row}-${c}`);
     setTimeout(() => {
@@ -528,7 +658,6 @@ function wordleSubmit() {
       cell.classList.add(result[c]);
     }, c * 180);
 
-    // Update key color (correct > present > absent)
     const cur = wordle.keyColors[letter];
     if (!cur || result[c] === "correct" || (result[c] === "present" && cur === "absent")) {
       wordle.keyColors[letter] = result[c];
@@ -539,7 +668,12 @@ function wordleSubmit() {
 
   if (guess.join("") === wordle.word) {
     wordle.gameOver = true;
-    markComplete("wordle");
+    const guessRow = wordle.row;
+    submitGameScore("wordle", {
+      completed: true,
+      guesses: guessRow + 1,
+      points: wordlePoints(guessRow, true)
+    });
     setTimeout(() => {
       buildWordleKeyboard();
       showWordleFinal(true);
@@ -551,6 +685,7 @@ function wordleSubmit() {
       buildWordleKeyboard();
       if (wordle.row >= wordle.maxGuesses) {
         wordle.gameOver = true;
+        submitGameScore("wordle", { completed: false, guesses: wordle.maxGuesses, points: 0 });
         showWordleFinal(false);
       } else {
         updateWordleCounter();
@@ -564,11 +699,9 @@ function scoreWordle(guess, word) {
   const wordArr = word.split("");
   const used = Array(wordArr.length).fill(false);
 
-  // Pass 1: exact matches
   guess.forEach((l, i) => {
     if (l === wordArr[i]) { result[i] = "correct"; used[i] = true; }
   });
-  // Pass 2: present but wrong position
   guess.forEach((l, i) => {
     if (result[i] === "correct") return;
     const j = wordArr.findIndex((wl, wi) => !used[wi] && wl === l);
@@ -593,22 +726,84 @@ function updateWordleCounter() {
 function showWordleFinal(won) {
   document.getElementById("wordle-grid").style.display = "none";
   document.getElementById("wordle-keyboard").style.display = "none";
-  const final = document.getElementById("wordle-final");
-  final.classList.remove("hidden");
+  document.getElementById("wordle-final").classList.remove("hidden");
   document.getElementById("wordle-final-icon").textContent  = won ? "🎊" : "😔";
   document.getElementById("wordle-final-title").textContent = won ? "כל הכבוד!" : "אוי...";
   document.getElementById("wordle-final-text").textContent  = won
     ? `מצאת את המילה "${wordle.word}" 🎉`
     : `המילה הייתה: ${wordle.word}`;
+  const wDone = JSON.parse(localStorage.getItem("weddingDone") || "{}");
+  const wd = wDone.wordle || {};
+  showScoreBlock("wordle", wd.points || 0, won ? `${wd.guesses} ניסיונות` : "לא הצלחת");
 }
 
-// Physical Hebrew keyboard support for Wordle
 document.addEventListener("keydown", e => {
   if (currentScreen !== "wordle" || wordle.gameOver) return;
   if (e.key === "Enter") { wordleSubmit(); return; }
   if (e.key === "Backspace") { wordleDelete(); return; }
   if (/^[א-ת]$/.test(e.key)) wordleType(e.key);
 });
+
+// ================================================================
+// LEADERBOARD
+// ================================================================
+
+const MEDALS = ["🥇", "🥈", "🥉"];
+
+function openLeaderboard() {
+  showScreen("leaderboard");
+  const content = document.getElementById("leaderboard-content");
+  content.innerHTML = '<p class="lb-loading">טוען תוצאות...</p>';
+
+  if (!window.firebaseReady) {
+    content.innerHTML = '<p class="lb-empty">לוח התוצאות יהיה זמין לאחר הגדרת Firebase.<br>ראה הוראות ב־firebase.js</p>';
+    return;
+  }
+
+  window.fetchLeaderboard(rows => {
+    renderLeaderboard(rows);
+    // Re-fetch once after a short delay to catch scores that just finished writing
+    setTimeout(() => {
+      if (currentScreen === "leaderboard") window.fetchLeaderboard(renderLeaderboard);
+    }, 2000);
+  });
+}
+
+function renderLeaderboard(rows) {
+  const content = document.getElementById("leaderboard-content");
+  const myId = window.getPlayerId ? window.getPlayerId() : null;
+
+  if (!rows || rows.length === 0) {
+    content.innerHTML = '<p class="lb-empty">אין תוצאות עדיין — היו הראשונים! 🎮</p>';
+    return;
+  }
+
+  const html = rows.map((row, i) => {
+    const isMe = row.id === myId;
+    const medal = MEDALS[i] || `${i + 1}.`;
+    const total = row.total || 0;
+
+    const connScore  = row.connections ? (row.connections.completed ? `${row.connections.points}` : "0") : "—";
+    const trivScore  = row.trivia      ? `${row.trivia.score}/${row.trivia.total}` : "—";
+    const wordScore  = row.wordle      ? (row.wordle.completed ? `${row.wordle.guesses} ניסיונות` : "לא הושלם") : "—";
+
+    return `
+      <div class="lb-row${isMe ? " lb-me" : ""}">
+        <div class="lb-rank">${medal}</div>
+        <div class="lb-info">
+          <div class="lb-name">${row.name || "אנונימי"}</div>
+          <div class="lb-details">
+            <span title="חיבורים">🔗 ${connScore}</span>
+            <span title="טריוויה">❓ ${trivScore}</span>
+            <span title="וורדל">📝 ${wordScore}</span>
+          </div>
+        </div>
+        <div class="lb-total">${total}<span class="lb-pts"> נק'</span></div>
+      </div>`;
+  }).join("");
+
+  content.innerHTML = `<div class="lb-list">${html}</div>`;
+}
 
 // ================================================================
 // INIT
@@ -618,7 +813,20 @@ window.addEventListener("load", () => {
   const saved = localStorage.getItem("weddingPlayer");
   if (saved) {
     playerName = saved;
+    window.playerName = saved;
     document.getElementById("player-name").value = saved;
+  }
+  if (new URLSearchParams(window.location.search).has("test")) {
+    const badge = document.createElement("div");
+    badge.id = "test-badge";
+    badge.style.cssText = "position:fixed;top:8px;left:8px;background:#e74c3c;color:#fff;font-size:0.7rem;font-weight:700;padding:3px 8px;border-radius:6px;z-index:9999;opacity:0.9;line-height:1.5;max-width:200px;word-break:break-all;";
+    badge.textContent = "🧪 TEST MODE";
+    document.body.appendChild(badge);
+    window._updateTestBadge = () => {
+      const id = localStorage.getItem("weddingPlayerId") || "(not yet assigned)";
+      badge.innerHTML = `🧪 TEST MODE<br><span style="font-weight:400;opacity:0.85">${id}</span>`;
+    };
+    window._updateTestBadge();
   }
   showScreen("welcome");
 });
