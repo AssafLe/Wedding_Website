@@ -149,6 +149,7 @@ function startGame(game) {
   if (game === "connections") initConnections();
   else if (game === "trivia") initTrivia();
   else if (game === "wordle") initWordle();
+  else if (game === "memes") initMemes();
   showScreen(game);
 }
 
@@ -791,6 +792,190 @@ function renderLeaderboard(rows) {
   }).join("");
 
   content.innerHTML = `<div class="lb-list">${html}</div>`;
+}
+
+// ================================================================
+// MEME CONTEST
+// ================================================================
+
+let meme = {
+  selectedBlob: null,
+  myMemeId: null,
+  votedIds: new Set()
+};
+
+function initMemes() {
+  meme.votedIds = new Set(JSON.parse(localStorage.getItem("weddingVotedMemes") || "[]"));
+  meme.myMemeId = localStorage.getItem("weddingMyMemeId") || null;
+
+  const form = document.getElementById("meme-upload-form");
+  const done = document.getElementById("meme-already-uploaded");
+  cancelMemeUpload();
+
+  if (meme.myMemeId) {
+    form.classList.add("hidden");
+    done.classList.remove("hidden");
+  } else if (window.firebaseReady) {
+    window.getUserMemeId(id => {
+      if (id) {
+        meme.myMemeId = id;
+        localStorage.setItem("weddingMyMemeId", id);
+        form.classList.add("hidden");
+        done.classList.remove("hidden");
+      } else {
+        form.classList.remove("hidden");
+        done.classList.add("hidden");
+      }
+    });
+  } else {
+    form.classList.remove("hidden");
+    done.classList.add("hidden");
+  }
+
+  refreshMemes();
+}
+
+function handleMemeFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/")) { alert("נא לבחור קובץ תמונה"); return; }
+  if (file.size > 5 * 1024 * 1024) { alert("גודל מקסימלי: 5MB"); return; }
+
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById("meme-preview").src = ev.target.result;
+    document.getElementById("meme-drop-zone").style.display = "none";
+    document.getElementById("meme-preview-wrap").classList.remove("hidden");
+  };
+  reader.readAsDataURL(file);
+
+  resizeMemeImage(file, blob => { meme.selectedBlob = blob; });
+}
+
+function resizeMemeImage(file, callback) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 900;
+      const r = Math.min(1, MAX / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * r);
+      canvas.height = Math.round(img.height * r);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(callback, "image/jpeg", 0.82);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function cancelMemeUpload() {
+  meme.selectedBlob = null;
+  const input = document.getElementById("meme-file-input");
+  if (input) input.value = "";
+  const dz = document.getElementById("meme-drop-zone");
+  const pw = document.getElementById("meme-preview-wrap");
+  const prog = document.getElementById("meme-upload-progress");
+  if (dz) dz.style.display = "";
+  if (pw) pw.classList.add("hidden");
+  if (prog) prog.classList.add("hidden");
+}
+
+function submitMeme() {
+  if (!meme.selectedBlob) { alert("נא לבחור תמונה"); return; }
+  if (!window.firebaseReady) { alert("Firebase לא מוגדר"); return; }
+
+  document.getElementById("meme-preview-wrap").classList.add("hidden");
+  document.getElementById("meme-upload-progress").classList.remove("hidden");
+  document.getElementById("meme-upload-bar").style.width = "0%";
+  document.getElementById("meme-upload-pct").textContent = "0%";
+
+  window.uploadMeme(meme.selectedBlob, playerName,
+    pct => {
+      document.getElementById("meme-upload-bar").style.width = pct + "%";
+      document.getElementById("meme-upload-pct").textContent = pct + "%";
+    },
+    (memeId, err) => {
+      document.getElementById("meme-upload-progress").classList.add("hidden");
+      if (err) {
+        console.error("[Meme upload error]", err);
+        alert("שגיאה בהעלאה: " + (err.message || err.code || err));
+        document.getElementById("meme-preview-wrap").classList.remove("hidden");
+        return;
+      }
+      meme.myMemeId = memeId;
+      localStorage.setItem("weddingMyMemeId", memeId);
+      document.getElementById("meme-upload-form").classList.add("hidden");
+      document.getElementById("meme-already-uploaded").classList.remove("hidden");
+      refreshMemes();
+    }
+  );
+}
+
+function showMemeReplaceForm() {
+  meme.myMemeId = null;
+  localStorage.removeItem("weddingMyMemeId");
+  document.getElementById("meme-already-uploaded").classList.add("hidden");
+  document.getElementById("meme-upload-form").classList.remove("hidden");
+  cancelMemeUpload();
+}
+
+function refreshMemes() {
+  const gallery = document.getElementById("meme-gallery");
+  gallery.innerHTML = '<p class="meme-loading">טוען מימים...</p>';
+  if (!window.firebaseReady) {
+    gallery.innerHTML = '<p class="meme-loading">Firebase לא מוגדר</p>';
+    return;
+  }
+  window.fetchMemes(renderMemeGallery);
+}
+
+function renderMemeGallery(memes) {
+  const gallery = document.getElementById("meme-gallery");
+  const myPlayerId = window.getPlayerId ? window.getPlayerId() : null;
+
+  if (!memes || !memes.length) {
+    gallery.innerHTML = '<p class="meme-empty">אין מימים עדיין — העלה/י את הראשון! 😄</p>';
+    return;
+  }
+
+  gallery.innerHTML = "";
+  memes.forEach((m, rank) => {
+    const isOwn = m.uploaderId === myPlayerId;
+    const voted = meme.votedIds.has(m.id);
+    const canVote = !isOwn && !voted;
+
+    const card = document.createElement("div");
+    card.className = "meme-card" + (rank === 0 ? " meme-top" : "");
+    card.innerHTML = `
+      ${rank === 0 ? '<div class="meme-crown">👑 הכי מצחיק</div>' : ""}
+      <img class="meme-img" src="${m.imageUrl}" alt="מם" loading="lazy">
+      <div class="meme-card-footer">
+        <span class="meme-uploader">${escapeHtml(m.uploaderName || "אנונימי")}</span>
+        <button class="meme-vote-btn${voted ? " voted" : ""}${isOwn ? " own" : ""}"
+                ${canVote ? "" : "disabled"}
+                onclick="handleMemeVote('${m.id}', this)">
+          👍 <span class="meme-vote-count">${m.voteCount || 0}</span>
+        </button>
+      </div>`;
+    gallery.appendChild(card);
+  });
+}
+
+function handleMemeVote(memeId, btn) {
+  btn.disabled = true;
+  window.voteMeme(memeId, (newCount, err) => {
+    if (err) { btn.disabled = false; return; }
+    meme.votedIds.add(memeId);
+    localStorage.setItem("weddingVotedMemes", JSON.stringify([...meme.votedIds]));
+    btn.classList.add("voted");
+    btn.querySelector(".meme-vote-count").textContent = newCount;
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 }
 
 // ================================================================

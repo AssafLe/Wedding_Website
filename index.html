@@ -44,6 +44,10 @@
         <div class="game-icon">📝</div>
         <h3>5 אותיות</h3>
       </div>
+      <div class="game-card" onclick="startGame('memes')">
+        <div class="game-icon">😂</div>
+        <h3>תחרות מימים</h3>
+      </div>
     </div>
     <button class="btn-leaderboard" onclick="openLeaderboard()">🏆 לוח תוצאות</button>
     <div class="portal-footer">💕</div>
@@ -142,7 +146,55 @@
     </div>
   </div>
 
-  <!-- SCREEN 6: Leaderboard -->
+  <!-- SCREEN 6: Meme Contest -->
+  <div id="screen-memes" class="screen game-screen">
+    <div class="game-header">
+      <button class="btn-back" onclick="showScreen('portal')">← חזרה</button>
+      <h2>😂 תחרות מימים</h2>
+      <button class="btn-back" onclick="refreshMemes()" title="רענן">🔄</button>
+    </div>
+
+    <!-- Upload section -->
+    <div id="meme-upload-section" class="meme-upload-section">
+      <div id="meme-upload-form">
+        <p class="meme-upload-hint">העלה/י מם אחד לתחרות!</p>
+        <label class="meme-drop-zone" id="meme-drop-zone">
+          <div class="meme-drop-icon">📸</div>
+          <div class="meme-drop-text">לחץ/י לבחירת תמונה</div>
+          <div class="meme-drop-sub">JPG · PNG · GIF · עד 5MB</div>
+          <input type="file" id="meme-file-input" accept="image/*" onchange="handleMemeFileSelect(event)">
+        </label>
+        <div id="meme-preview-wrap" class="meme-preview-wrap hidden">
+          <img id="meme-preview" class="meme-preview-img" alt="תצוגה מקדימה">
+          <div class="meme-upload-actions">
+            <button class="btn-primary" onclick="submitMeme()">העלה! 🚀</button>
+            <button class="btn-secondary" onclick="cancelMemeUpload()">ביטול</button>
+          </div>
+        </div>
+        <div id="meme-upload-progress" class="hidden">
+          <div class="meme-upload-track">
+            <div id="meme-upload-bar" class="meme-upload-bar"></div>
+          </div>
+          <p id="meme-upload-pct">0%</p>
+        </div>
+      </div>
+      <div id="meme-already-uploaded" class="meme-already-uploaded hidden">
+        <p>✅ המם שלך הועלה!</p>
+        <button class="btn-secondary" onclick="showMemeReplaceForm()">החלף מם 🔄</button>
+      </div>
+    </div>
+
+    <!-- Gallery -->
+    <div class="meme-gallery-header">
+      <h3>🏆 גלריית המימים</h3>
+      <p class="meme-gallery-sub">מוין לפי הכי מצחיק</p>
+    </div>
+    <div id="meme-gallery" class="meme-gallery">
+      <p class="meme-loading">טוען מימים...</p>
+    </div>
+  </div>
+
+  <!-- SCREEN 7: Leaderboard -->
   <div id="screen-leaderboard" class="screen game-screen">
     <div class="game-header">
       <button class="btn-back" onclick="showScreen('portal')">← חזרה</button>
@@ -155,6 +207,7 @@
   <!-- Firebase SDK (loaded before our scripts) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
   <script src="firebase.js"></script>
   <script src="script.js"></script>
 </body>
