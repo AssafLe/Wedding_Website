@@ -6,7 +6,6 @@ const GAME_DATA = {
 
   // --- CONNECTIONS ---
   // 4 categories × 4 items each (16 items total)
-  // Colors rank difficulty: yellow (easy) → green → blue → purple (hard)
   connections: {
     categories: [
       {
@@ -15,19 +14,19 @@ const GAME_DATA = {
         items: ["שמן ", "סול", "מרק", "יום שלישי"]
       },
       {
-        name: "מקומות שגרנו בהם",
+        name: "מקומות שגרנו בהם ביחד",
         color: "green",
         items: ["אפקה ", "קצרין", "קליבלנד", "לחובר"]
       },
       {
-        name: "משותף לנו",
+        name: "דברים שאסף עשה בגלל אילנה",
         color: "blue",
-        items: ["טבעוני ", "לוחמה אלקטרונית", "מרתון", "פתח תקווה"]
+        items: ["טבעונות", "אומנה", "חופשה בתאילנד", "לעבור לתל אביב"]
       },
       {
-        name: "קטגוריה רביעית — שם הקטגוריה",
+        name: "דברים שאילנה עשתה בגלל אסף",
         color: "purple",
-        items: ["3 ", "2", "1", "4 "]
+        items: ["מרתון", "טיפוס פסגות", "שתיית בירה", "3 ארוחות ביום"]
       }
     ]
   },
@@ -41,8 +40,80 @@ const GAME_DATA = {
         answer: "2019"
       },
       {
-        question: "שאלת דוגמה נוספת — מה הדבר האהוב על אסף?",
-        answer: "תשובה כאן"
+        question: "באילו מדינות בעולם טיילנו ביחד?",
+        answer: "אוסטריה, יוון, פרו, בוליביה, הודו, סרי לנקה, נפאל"
+      },
+      {
+        question: "לאן אנחנו טסים בירח דבש?",
+        answer: "ניו זילנד"
+      },
+      {
+        question: "איפה אסף הציע לאילנה נישואין?",
+        answer: "Pico Austria בבוליביה"
+      },
+      {
+        question: "לכמה כלבים עשינו אומנה?",
+        answer: "10"
+      },
+      {
+        question: "מה האטרקציה האהובה עלינו בכל יעד?",
+        answer: "סופרמרקט"
+      },
+      {
+        question: "מי היה טבעוני קודם ומי סתם מושפע?",
+        answer: "אילנה (הטבעונית המקורית), אסף (המושפע)"
+      },
+      {
+        question: "כמה בירות שונות אסף שתה עד היום?",
+        answer: "806"
+      },
+      {
+        question: "באיזה סוג חקלאות עבדנו ברמת הגולן?",
+        answer: "קטיף תפוחים"
+      },
+      {
+        question: "איזה מקום לקח אסף במרתון ים המלח?",
+        answer: "מקום 13"
+      },
+      {
+        question: "איזה פודקאסט אילנה שמעה במהלך רוב ריצת המרתון?",
+        answer: "למי אכפת"
+      },
+      {
+        question: "אם צריך לנחש מדינה, איזו מדינה אילנה תנחש?",
+        answer: "ג'יבוטי"
+      },
+      {
+        question: "מה מהבאים קוסקוס אכל ברחוב: לאפה שווארמה / יונה פצועה / פיינט של בן אנד ג'ריס?",
+        answer: "פיינט של בן אנד ג'ריס"
+      },
+      {
+        question: "מה הגובה הכי גבוה שטיפסנו אליו? (6200 / 6380 / 6342 / 6236 מטר)",
+        answer: "6348" 
+      },
+      {
+        question: "איזו רופאה אילנה רוצה להיות?",
+        answer: "פנימאית (בינתיים!)"
+      },
+      {
+        question: "מה המקום הכי מוזר שאסף עבד בו מרחוק?",
+        answer: "משאית לוחמה אלקטרונית בצפון"
+      },
+      {
+        question: "מהי הלהקה הישראלית האהובה על אסף?",
+        answer: "כוורת"
+      },
+      {
+        question: "מה הדבר הכי ביזארי שאילנה עשתה בשביל לחסוך כסף בטיול הגדול?",
+        answer: "ליקוט מזון בהוסטלים"
+      },
+      {
+        question: "מה הסדרה הנוכחית שאילנה ואסף צופים בה?",
+        answer: "Six Feet Under"
+      },
+      {
+        question: "באיזה מקום אסף ואילנה היו ביחד במילואים?",
+        answer: "דלתון"
       }
       // הוסף/י שאלות נוספות כאן...
     ]
@@ -165,8 +236,8 @@ function connectionsPoints(mistakes, completed) {
 }
 
 // Trivia: percentage of correct answers
-function triviaPoints(score, total) {
-  return Math.round((score / total) * 100);
+function triviaPoints(score) {
+  return score * 10;
 }
 
 // Wordle: fewer guesses = more points; failed = 0
@@ -446,7 +517,7 @@ function showConnectionsFinal(data) {
 
 function initTrivia() {
   trivia = {
-    questions: shuffle(GAME_DATA.trivia.questions),
+    questions: [...GAME_DATA.trivia.questions],
     index: 0,
     score: 0,
     answered: false
@@ -507,7 +578,7 @@ function triviaFinish() {
   document.getElementById("final-score-text").textContent =
     `ענית נכון על ${score} מתוך ${total} שאלות!`;
 
-  const pts = triviaPoints(score, total);
+  const pts = triviaPoints(score);
   submitGameScore("trivia", { score, total, points: pts });
   showScoreBlock("trivia", pts, `${score} מתוך ${total} נכון`);
 }
